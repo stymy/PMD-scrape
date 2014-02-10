@@ -42,9 +42,6 @@ def get_pdf(PMID,opener):
         response_pub = opener.open(req_pub)
         #open("/home/rschadmin/Cache/"+str(PMID), 'w').write(data) #save cache
         sd_soup = BeautifulSoup(response_pub.read())
-        import pdb
-        pdb.set_trace()
-        pdflink = find_pdflink(sd_soup)
         if not pdflink.startswith('http://'):
             pdflink = response_pub.url+pdflink
         req_file = urllib2.Request(pdflink,headers=my_headers)

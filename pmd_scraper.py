@@ -1,6 +1,7 @@
 import urllib2
 import urllib
 import cookielib
+from urlparse import urlparse
 from bs4 import BeautifulSoup
 
 def find_pdflink(soup):
@@ -8,9 +9,14 @@ def find_pdflink(soup):
         link = action.get('href')
         try: is_pdf=link.endswith(".pdf")
         except AttributeError:continue
-        if is_pdf: 
+        if is_pdf:         
             return link
-        
+        else:
+            try: is_pdf=str(action).find("PDF")
+            except AttributeError:continue
+        if is_pdf>0:
+            return link
+            
 def get_cookie():
     cj = cookielib.CookieJar()
     cookieopener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
@@ -27,7 +33,7 @@ def get_pdf(PMID,opener,my_headers):
     response_url = opener.open(req_url)
     data = response_url.read()
     if not response_url.url.find(".pdf")>0:
-        #pubget
+        #pubget->pubmed
         if response_url.url.startswith('http://pubget.com'):
             pmd_url = 'http://www.ncbi.nlm.nih.gov/pubmed/?term='+str(PMID)
             pmd_page = urllib2.urlopen(pmd_url).read()
@@ -35,7 +41,7 @@ def get_pdf(PMID,opener,my_headers):
             link_out = pmd_soup.find("div",class_="icons")
             try: pub_url = 'http://ezproxy.med.nyu.edu/login?url='+link_out.find(href=True)['href'] 
             except TypeError:
-                raise "There is no pdf link out of PubMed:"+pmd_url
+                print "There is no pdf link out of PubMed:"+pmd_url
         #Science Direct
         else:
             pub_url = 'http://ezproxy.med.nyu.edu/login?url='+response_url.url
@@ -43,13 +49,22 @@ def get_pdf(PMID,opener,my_headers):
         response_pub = opener.open(req_pub)
         sd_soup = BeautifulSoup(response_pub.read())
         pdflink = find_pdflink(sd_soup)
+        
+        #handle relative links
         if not pdflink.startswith('http://'):
-            pdflink = response_pub.url+pdflink
+            parsed = urlparse(response_pub.url)
+            pdflink = parsed.scheme+'://'+parsed.netloc+pdflink
+            
         req_file = urllib2.Request(pdflink,headers=my_headers)
         response_file = opener.open(req_file)
         data = response_file.read()
     with open ("/home/rschadmin/Data/scraped/"+str(PMID)+".pdf","wb") as savepdf:
-        savepdf.write(data)
+        if data.startswith('%PDF'):
+            savepdf.write(data)
+        else:
+            with_flag= response_pub.url+'/n'+pdflink+'/n'+response_file.url+'/n'+data
+            import pdb; pdb.set_trace()
+            savepdf.write(with_flag)
     
 if __name__=='__main__':
     cookie_handler= urllib2.HTTPCookieProcessor(get_cookie())

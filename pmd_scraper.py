@@ -6,8 +6,8 @@ from bs4 import BeautifulSoup
 def find_pdflink(soup):
     for action in soup.find_all("a"):
         link = action.get('href')
-        try: is_pdf=link[-4:]==".pdf"
-        except TypeError:continue
+        try: is_pdf=link.endswith(".pdf")
+        except AttributeError:continue
         if is_pdf: 
             return link
         
@@ -22,26 +22,27 @@ def get_cookie():
     else:
         print "Login Failed"
 
-def get_pdf(PMID,opener):
+def get_pdf(PMID,opener,my_headers):
     req_url = urllib2.Request('http://www.pubget.com/pdf/'+str(PMID),headers=my_headers)
     response_url = opener.open(req_url)
     data = response_url.read()
-    if not response_url.url.endswith(".pdf"):
+    if not response_url.url.find(".pdf")>0:
         #pubget
         if response_url.url.startswith('http://pubget.com'):
             pmd_url = 'http://www.ncbi.nlm.nih.gov/pubmed/?term='+str(PMID)
             pmd_page = urllib2.urlopen(pmd_url).read()
             pmd_soup = BeautifulSoup(pmd_page)
             link_out = pmd_soup.find("div",class_="icons")
-            pub_url = 'http://ezproxy.med.nyu.edu/login?url='+link_out.find(href=True)['href']  
+            try: pub_url = 'http://ezproxy.med.nyu.edu/login?url='+link_out.find(href=True)['href'] 
+            except TypeError:
+                raise "There is no pdf link out of PubMed:"+pmd_url
         #Science Direct
         else:
             pub_url = 'http://ezproxy.med.nyu.edu/login?url='+response_url.url
-
         req_pub = urllib2.Request(pub_url,headers=my_headers)
         response_pub = opener.open(req_pub)
-        #open("/home/rschadmin/Cache/"+str(PMID), 'w').write(data) #save cache
         sd_soup = BeautifulSoup(response_pub.read())
+        pdflink = find_pdflink(sd_soup)
         if not pdflink.startswith('http://'):
             pdflink = response_pub.url+pdflink
         req_file = urllib2.Request(pdflink,headers=my_headers)

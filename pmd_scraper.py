@@ -1,8 +1,18 @@
+# rmo needed to make some marginal changes for this to be importable
+
 import urllib2
 import urllib
 import cookielib
 from urlparse import urlparse
 from bs4 import BeautifulSoup
+
+moz_headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-GB; rv:1.8.1.12) Gecko/20080201 Firefox/2.0.0.12',
+    'Accept': 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5',
+    'Accept-Language': 'en-gb,en;q=0.5',
+    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
+    'Connection': 'keep-alive'
+    }
 
 def find_pdflink(soup):
     for action in soup.find_all("a"):
@@ -33,7 +43,7 @@ def get_pdf(PMID,opener,my_headers):
     response_url = opener.open(req_url)
     data = response_url.read()
     if not response_url.url.find(".pdf")>0:
-        #pubget->pubmed
+        #pubget or wily -> pubmed
         if response_url.url.startswith('http://pubget.com'):
             pmd_url = 'http://www.ncbi.nlm.nih.gov/pubmed/?term='+str(PMID)
             pmd_page = urllib2.urlopen(pmd_url).read()
@@ -42,6 +52,15 @@ def get_pdf(PMID,opener,my_headers):
             try: pub_url = 'http://ezproxy.med.nyu.edu/login?url='+link_out.find(href=True)['href'] 
             except TypeError:
                 print "There is no pdf link out of PubMed:"+pmd_url
+                
+        #if response_url.url.startswith('http://onlinelibrary.wiley.com'):
+            #wiley_soup = BeautifulSoup(data)
+            #import pdb; pdb.set_trace()
+            #from zotero
+            #m = wileysoup.find(id="pdfDocument")
+            #if(m) {
+                #m[1] = ZU.unescapeHTML(m[1]);
+                #Z.debug(m[1]);
         #Science Direct
         else:
             pub_url = 'http://ezproxy.med.nyu.edu/login?url='+response_url.url
@@ -63,17 +82,12 @@ def get_pdf(PMID,opener,my_headers):
             savepdf.write(data)
         else:
             with_flag= response_pub.url+'/n'+pdflink+'/n'+response_file.url+'/n'+data
+            raise RuntimeError
             import pdb; pdb.set_trace()
             savepdf.write(with_flag)
-    
-if __name__=='__main__':
+
+def get_opener():
     cookie_handler= urllib2.HTTPCookieProcessor(get_cookie())
     redirect_handler= urllib2.HTTPRedirectHandler()
     opener = urllib2.build_opener(redirect_handler,cookie_handler)
-    my_headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-GB; rv:1.8.1.12) Gecko/20080201 Firefox/2.0.0.12',
-    'Accept': 'text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5',
-    'Accept-Language': 'en-gb,en;q=0.5',
-    'Accept-Charset': 'ISO-8859-1,utf-8;q=0.7,*;q=0.7',
-    'Connection': 'keep-alive'
-    }
+    return opener

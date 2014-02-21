@@ -1,8 +1,7 @@
-# rmo needed to make some marginal changes for this to be importable
-
 import urllib2
 import urllib
 import cookielib
+import os
 from urlparse import urlparse
 from bs4 import BeautifulSoup
 
@@ -38,7 +37,7 @@ def get_cookie():
     else:
         print "Login Failed"
 
-def get_pdf(PMID,opener,my_headers):
+def get_pdf(PMID,opener,my_headers, directory):
     req_url = urllib2.Request('http://www.pubget.com/pdf/'+str(PMID),headers=my_headers)
     response_url = opener.open(req_url)
     data = response_url.read()
@@ -77,7 +76,7 @@ def get_pdf(PMID,opener,my_headers):
         req_file = urllib2.Request(pdflink,headers=my_headers)
         response_file = opener.open(req_file)
         data = response_file.read()
-    with open ("/home/rschadmin/Data/scraped/"+str(PMID)+".pdf","wb") as savepdf:
+    with open(os.path.join(directory+str(PMID)+".pdf"),"wb") as savepdf:
         if data.startswith('%PDF'):
             savepdf.write(data)
         else:
